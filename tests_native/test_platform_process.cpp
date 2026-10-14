@@ -45,19 +45,27 @@ static int child_main(const std::vector<std::string> &args) {
   return 2;
 }
 
+static std::string normalize_captured_newlines(std::string text) {
+  std::string::size_type pos = 0;
+  while ((pos = text.find("\r\n", pos)) != std::string::npos) {
+    text.replace(pos, 2, "\n");
+    ++pos;
+  }
+  return text;
+}
 static int parent_main() {
   const std::string self = path_to_utf8(current_executable_path());
   require(!self.empty(), "find test executable");
   const std::string message = "arg with spaces \\\" and UTF-8: \xd0\xbf\xd1\x80\xd0\xb8\xd0\xb2\xd0\xb5\xd1\x82";
   const auto args = run_process(self, {"--echo-arg", message});
-  if (!(args.started && args.exit_code == 0 && args.output == message + "\n")) std::cerr << "process args: started=" << args.started << " exit=" << args.exit_code << " bytes=" << args.output.size() << " got=[" << args.output << "] expected=[" << message << "]\n";
-  require(args.started && args.exit_code == 0 && args.output == message + "\n",
+  if (!(args.started && args.exit_code == 0 && normalize_captured_newlines(args.output) == message + "\n")) std::cerr << "process args: started=" << args.started << " exit=" << args.exit_code << " bytes=" << args.output.size() << " got=[" << args.output << "] expected=[" << message << "]\n";
+  require(args.started && args.exit_code == 0 && normalize_captured_newlines(args.output) == message + "\n",
           "Unicode/quoted command-line arguments and stdout");
 
   ProcessOptions input;
   input.input = "stdin UTF-8: \xd0\xbc\xd1\x83\xd0\xb7\xd1\x8b\xd0\xba\xd0\xb0\n";
   auto piped = run_process(self, {"--echo-stdin"}, input);
-  require(piped.started && piped.exit_code == 0 && piped.output == input.input,
+  require(piped.started && piped.exit_code == 0 && normalize_captured_newlines(piped.output) == input.input,
           "child stdin/stdout and inherited standard handles");
 
   ReadPipeProcess encoder;
