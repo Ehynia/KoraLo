@@ -98,7 +98,7 @@ static int parent_main() {
   fs::copy_file(path_from_utf8(self), unicode_exe, fs::copy_options::overwrite_existing, ec);
   require(!ec, "copy executable into Unicode directory");
   const auto unicode = run_process(path_to_utf8(unicode_exe), {"--echo-arg", message});
-  require(unicode.started && unicode.exit_code == 0 && unicode.output == message + "\n",
+  require(unicode.started && unicode.exit_code == 0 && normalize_captured_newlines(unicode.output) == message + "\n",
           "CreateProcessW runs executable from Unicode directory");
   std::cout << "PASS platform process (Unicode, pipes, NUL handles, exit, timeout)\n";
   return 0;
