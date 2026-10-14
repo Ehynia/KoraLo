@@ -453,8 +453,9 @@ int wmain(int argc, wchar_t **argv) {
   for (int i = 0; i < argc; ++i) {
     int needed = WideCharToMultiByte(CP_UTF8, 0, argv[i], -1, nullptr, 0, nullptr, nullptr);
     if (needed > 1) {
-      std::string s(needed - 1, '\0');
+      std::string s(needed, '\0');
       WideCharToMultiByte(CP_UTF8, 0, argv[i], -1, s.data(), needed, nullptr, nullptr);
+      s.pop_back();
       strings.push_back(s);
     } else {
       strings.push_back({});
