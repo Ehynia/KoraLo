@@ -82,7 +82,7 @@ int main(){try{
         for(int i=0;i<6;++i){PreviewRequest layer;layer.path=path;layer.stream_id=i+1;layer.opacity=.25;layer.continuous=true;layer.requested_fps=24;layer.allow_prepared_cache=false;scene.layers.push_back(layer);}
         const auto starts=engine.preview_stream_start_count();
         for(int n=0;n<12;++n){for(auto& layer:scene.layers)layer.time=n/24.0;preview(engine,scene);}
-        check(engine.preview_stream_start_count()-starts==6,"six streams remain open across twelve frames of same-file layers");
+        if(engine.preview_stream_start_count()-starts!=6)std::cerr<<"multitrack starts="<<(engine.preview_stream_start_count()-starts)<<" expected=6\n";check(engine.preview_stream_start_count()-starts==6,"six streams remain open across twelve frames of same-file layers");
         scene.continuous=false;for(auto& layer:scene.layers){layer.continuous=false;layer.time=.25;}preview(engine,scene);
         scene.continuous=true;for(auto& layer:scene.layers){layer.continuous=true;layer.time=.5;}preview(engine,scene);
         check(engine.preview_stream_start_count()-starts==12,"pause releases decoders and resume restarts them");
