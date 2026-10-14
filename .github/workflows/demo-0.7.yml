@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   linux:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v5
@@ -22,7 +22,7 @@ jobs:
           echo 'd72b89aaa1bd1e99b4eaa0e4522b45c0e05f4bc8fba54abd5b371e05f0007976  KoraLo-GIT-ready.zip' | sha256sum -c -
           unzip -q KoraLo-GIT-ready.zip -d source
           test -f source/KoraLo/CMakeLists.txt
-          cp tests_native/test_platform_process.cpp tests_native/test_runtime.cpp tests_native/test_media.cpp source/KoraLo/tests_native/
+          cp tests_native/test_platform_process.cpp tests_native/test_runtime.cpp tests_native/test_media.cpp tests_native/test_multitrack.cpp source/KoraLo/tests_native/
       - name: Build x64
         run: |
           cmake -S source/KoraLo -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DKORALO_ENABLE_CUDA=OFF -DKORALO_BUILD_TESTS=ON
@@ -59,7 +59,7 @@ jobs:
           $hash = (Get-FileHash KoraLo-GIT-ready.zip -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($hash -ne 'd72b89aaa1bd1e99b4eaa0e4522b45c0e05f4bc8fba54abd5b371e05f0007976') { throw 'Archive digest mismatch' }
           Expand-Archive -LiteralPath KoraLo-GIT-ready.zip -DestinationPath source
-          Copy-Item -Force tests_native/test_platform_process.cpp,tests_native/test_runtime.cpp,tests_native/test_media.cpp -Destination source/KoraLo/tests_native/
+          Copy-Item -Force tests_native/test_platform_process.cpp,tests_native/test_runtime.cpp,tests_native/test_media.cpp,tests_native/test_multitrack.cpp -Destination source/KoraLo/tests_native/
       - name: Install FFmpeg for media integration tests
         shell: pwsh
         run: choco install ffmpeg -y --no-progress
