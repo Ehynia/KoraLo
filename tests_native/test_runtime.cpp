@@ -63,6 +63,7 @@ void process_tests() {
   for (std::size_t i = 1; i < args.size(); ++i)
     expected += std::to_string(args[i].size()) + ":" + args[i] + "\n";
   auto result = run_process(exe, args);
+  if (!(result.started && result.exit_code == 0 && result.output == expected)) std::cerr << "runtime argv: started=" << result.started << " exit=" << result.exit_code << " got=[" << result.output << "] expected=[" << expected << "]\n";
   require(result.started && result.exit_code == 0 && result.output == expected,
           "argv must preserve quotes, Unicode and empty arguments");
   require(run_process(exe, {"--exit"}).exit_code == 7, "child exit code");
