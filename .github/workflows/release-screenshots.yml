@@ -1,0 +1,105 @@
+name: Publish real Demo 0.7 screenshots
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/release-screenshots.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  screenshots:
+    if: github.repository == 'Ehynia/KoraLo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install headless desktop tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb openbox xdotool ffmpeg unzip
+
+      - name: Use published Demo 0.7 executable and built-in example
+        run: |
+          mkdir -p /tmp/koralo-demo /tmp/koralo-source screenshots
+          gh release download v0.7.0-demo --pattern 'KoraLo-demo-0.7-linux-x64.tar.gz' --dir /tmp/koralo-demo
+          tar -xzf /tmp/koralo-demo/KoraLo-demo-0.7-linux-x64.tar.gz -C /tmp/koralo-demo
+          unzip -q KoraLo-GIT-ready.zip 'KoraLo/docs/examples/VectorAnimation.kora' -d /tmp/koralo-source
+          test -x /tmp/koralo-demo/KoraLo/KoraLo
+          test -f /tmp/koralo-source/KoraLo/docs/examples/VectorAnimation.kora
+
+      - name: Capture editor and export screenshots from real GUI
+        shell: bash
+        run: |
+          set -euo pipefail
+          Xvfb :98 -screen 0 1600x900x24 -ac > /tmp/koralo-xvfb.log 2>&1 &
+          XVFB_PID=$!
+          trap 'kill "$APP_PID" "$WM_PID" "$XVFB_PID" 2>/dev/null || true' EXIT
+          sleep 2
+          DISPLAY=:98 openbox > /tmp/koralo-openbox.log 2>&1 &
+          WM_PID=$!
+          sleep 2
+          cd /tmp/koralo-demo/KoraLo
+          DISPLAY=:98 KORALO_LANG=ru-RU KORALO_UI_RENDERER=cpu \
+            ./KoraLo /tmp/koralo-source/KoraLo/docs/examples/VectorAnimation.kora \
+            > /tmp/koralo-app.log 2>&1 &
+          APP_PID=$!
+          for attempt in $(seq 1 25); do
+            kill -0 "$APP_PID" || { cat /tmp/koralo-app.log; exit 1; }
+            if DISPLAY=:98 xdotool search --name 'KoraLo' > /dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          sleep 4
+          DISPLAY=:98 ffmpeg -hide_banner -loglevel error -f x11grab -video_size 1600x900 \
+            -i :98 -frames:v 1 -y "$GITHUB_WORKSPACE/screenshots/demo-0.7-editor.png"
+          DISPLAY=:98 xdotool mousemove --sync 1573 73 click 1
+          sleep 2
+          DISPLAY=:98 ffmpeg -hide_banner -loglevel error -f x11grab -video_size 1600x900 \
+            -i :98 -frames:v 1 -y "$GITHUB_WORKSPACE/screenshots/demo-0.7-export.png"
+          test -s "$GITHUB_WORKSPACE/screenshots/demo-0.7-editor.png"
+          test -s "$GITHUB_WORKSPACE/screenshots/demo-0.7-export.png"
+          test "$(sha256sum "$GITHUB_WORKSPACE/screenshots/demo-0.7-editor.png" | cut -d' ' -f1)" != "$(sha256sum "$GITHUB_WORKSPACE/screenshots/demo-0.7-export.png" | cut -d' ' -f1)"
+          ls -lh "$GITHUB_WORKSPACE"/screenshots/*.png
+
+      - name: Publish captures to repository for reliable embedding
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in screenshots/demo-0.7-editor.png screenshots/demo-0.7-export.png; do
+            b64="$(base64 -w0 "$file")"
+            gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/docs/screenshots/$(basename "$file")" \
+              -f "message=docs: add captured Demo 0.7 screenshot $(basename "$file")" \
+              -f "content=$b64" \
+              -f "branch=main" > /dev/null
+          done
+
+      - name: Upload screenshots and embed in current release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload v0.7.0-demo screenshots/demo-0.7-editor.png screenshots/demo-0.7-export.png --clobber
+          gh release view v0.7.0-demo --json body --jq '.body' > release-notes.md
+          if ! grep -q '## Screenshots — Demo 0.7' release-notes.md; then
+            cat >> release-notes.md <<'EOF'
+
+          ## Screenshots — Demo 0.7
+
+          **Editor, preview and timeline** (Linux x64; built-in vector animation sample)
+
+          ![KoraLo Demo 0.7 — editor with an animated sample in the timeline](https://raw.githubusercontent.com/Ehynia/KoraLo/main/docs/screenshots/demo-0.7-editor.png)
+
+          **Video export settings**
+
+          ![KoraLo Demo 0.7 — export settings dialog](https://raw.githubusercontent.com/Ehynia/KoraLo/main/docs/screenshots/demo-0.7-export.png)
+
+          _Actual screenshots captured from the published Linux x64 Demo 0.7 binary using X11 in software-rendering mode. Windows appearance may differ._
+          EOF
+          fi
+          gh release edit v0.7.0-demo --notes-file release-notes.md
