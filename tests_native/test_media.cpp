@@ -260,7 +260,7 @@ int main(){
     const int free_mid=free_fx_project.add_media(*m).id;int free_vt=0;for(const auto& t:free_fx_project.tracks)if(t.kind==TrackKind::Video){free_vt=t.id;break;}
     Clip& free_clip=free_fx_project.add_clip(free_mid,free_vt,0.0,0.0,0.8);
     for(const auto& fx:free_fx){EffectInstance copy=fx;copy.id=free_fx_project.next_id();free_clip.video_effects.push_back(std::move(copy));}
-    err.clear();req(e.render_project(free_fx_project,free_fx_render,nullptr,&err),"render free editing effects chain");if(!err.empty())std::cerr<<err;req(fs::exists(free_fx_render_path)&&fs::file_size(free_fx_render_path)>1000,"free editing effects render file");
+    err.clear();const bool free_fx_ok=e.render_project(free_fx_project,free_fx_render,nullptr,&err);if(!err.empty())std::cerr<<"Free effects render error: "<<err<<"\n";req(free_fx_ok,"render free editing effects chain");req(fs::exists(free_fx_render_path)&&fs::file_size(free_fx_render_path)>1000,"free editing effects render file");
 
     Project audio_fx_project=Project::make_default();
     const int audio_fx_mid=audio_fx_project.add_media(*m).id;int audio_fx_track=0;for(const auto& t:audio_fx_project.tracks)if(t.kind==TrackKind::Audio){audio_fx_track=t.id;break;}
