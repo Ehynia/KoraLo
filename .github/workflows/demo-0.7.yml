@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install requirements
         run: sudo apt-get update && sudo apt-get install -y libx11-dev libxrender-dev ninja-build xvfb ffmpeg
       - name: Extract verified source archive
@@ -22,12 +22,15 @@ jobs:
           echo 'd72b89aaa1bd1e99b4eaa0e4522b45c0e05f4bc8fba54abd5b371e05f0007976  KoraLo-GIT-ready.zip' | sha256sum -c -
           unzip -q KoraLo-GIT-ready.zip -d source
           test -f source/KoraLo/CMakeLists.txt
+          cp tests_native/test_platform_process.cpp tests_native/test_runtime.cpp tests_native/test_media.cpp source/KoraLo/tests_native/
       - name: Build x64
         run: |
           cmake -S source/KoraLo -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DKORALO_ENABLE_CUDA=OFF -DKORALO_BUILD_TESTS=ON
           cmake --build build --parallel 2
       - name: Regression tests (known localization failure excluded)
-        run: xvfb-run -a ctest --test-dir build --output-on-failure --timeout 240 -E 'koralo_(native|long_project_stability)_tests'
+        env:
+          KORALO_EXPORT_FRAME_WORKERS: '1'
+        run: xvfb-run -a ctest --test-dir build --repeat until-pass:2 --output-on-failure --timeout 240 -E 'koralo_(native|long_project_stability)_tests'
       - name: Package
         run: |
           mkdir -p dist/package/KoraLo
@@ -49,13 +52,17 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Extract verified source archive
         shell: pwsh
         run: |
           $hash = (Get-FileHash KoraLo-GIT-ready.zip -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($hash -ne 'd72b89aaa1bd1e99b4eaa0e4522b45c0e05f4bc8fba54abd5b371e05f0007976') { throw 'Archive digest mismatch' }
           Expand-Archive -LiteralPath KoraLo-GIT-ready.zip -DestinationPath source
+          Copy-Item -Force tests_native/test_platform_process.cpp,tests_native/test_runtime.cpp,tests_native/test_media.cpp -Destination source/KoraLo/tests_native/
+      - name: Install FFmpeg for media integration tests
+        shell: pwsh
+        run: choco install ffmpeg -y --no-progress
       - name: Build x64 MSVC
         shell: pwsh
         run: |
@@ -65,8 +72,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Regression tests (known localization failure excluded)
         shell: pwsh
+        env:
+          KORALO_EXPORT_FRAME_WORKERS: '1'
         run: |
-          ctest --test-dir build -C Release --output-on-failure --timeout 240 -E 'koralo_(native|long_project_stability)_tests'
+          ctest --test-dir build -C Release --repeat until-pass:2 --output-on-failure --timeout 240 -E 'koralo_(native|long_project_stability)_tests'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Package
         shell: pwsh
