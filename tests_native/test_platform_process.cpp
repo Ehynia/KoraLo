@@ -50,6 +50,7 @@ static int parent_main() {
   require(!self.empty(), "find test executable");
   const std::string message = "arg with spaces \\\" and UTF-8: \xd0\xbf\xd1\x80\xd0\xb8\xd0\xb2\xd0\xb5\xd1\x82";
   const auto args = run_process(self, {"--echo-arg", message});
+  if (!(args.started && args.exit_code == 0 && args.output == message + "\n")) std::cerr << "process args: started=" << args.started << " exit=" << args.exit_code << " bytes=" << args.output.size() << " got=[" << args.output << "] expected=[" << message << "]\n";
   require(args.started && args.exit_code == 0 && args.output == message + "\n",
           "Unicode/quoted command-line arguments and stdout");
 
