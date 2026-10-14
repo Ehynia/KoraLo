@@ -84,7 +84,9 @@ jobs:
           New-Item -ItemType Directory -Force dist/KoraLo | Out-Null
           cmake --install build --config Release --prefix "$pwd/dist/KoraLo"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Copy-Item -Recurse source/KoraLo/locales,source/KoraLo/assets -Destination dist/KoraLo
+          robocopy source/KoraLo/assets dist/KoraLo/assets /E /NFL /NDL /NJH /NJS /NC /NS
+          if ($LASTEXITCODE -gt 7) { exit $LASTEXITCODE }
+          $global:LASTEXITCODE = 0
           Copy-Item source/KoraLo/LICENSE,source/KoraLo/THIRD_PARTY_NOTICES.md,source/KoraLo/BUILD_REVISION.txt -Destination dist/KoraLo
           'KoraLo Demo 0.7 Windows x64. Launch KoraLo.exe. Requires ffmpeg.exe, ffprobe.exe, ffplay.exe on PATH. CUDA not included.' | Set-Content -Encoding utf8 dist/KoraLo/README-RUN.txt
           Compress-Archive -Path dist/KoraLo -DestinationPath dist/KoraLo-demo-0.7-windows-x64.zip
