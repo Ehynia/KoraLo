@@ -1,0 +1,1 @@
+module.exports={packagerConfig:{name:'AniSpawn',executableName:'anispawn',asar:true},makers:[{name:'@electron-forge/maker-zip',platforms:['win32','linux']},{name:'@electron-forge/maker-deb',config:{}},{name:'@electron-forge/maker-squirrel',config:{name:'AniSpawn'}}]};
