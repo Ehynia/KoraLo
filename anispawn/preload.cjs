@@ -1,0 +1,1 @@
+const {contextBridge,ipcRenderer}=require('electron');contextBridge.exposeInMainWorld('desktop',{getState:()=>ipcRenderer.invoke('anispawn:state'),saveState:s=>ipcRenderer.invoke('anispawn:save',s),pickVideo:()=>ipcRenderer.invoke('anispawn:video'),openExternal:u=>ipcRenderer.invoke('anispawn:open',u)});
