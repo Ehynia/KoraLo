@@ -1,0 +1,48 @@
+name: AniSpawn Linux and Windows installers
+on:
+  push:
+    branches: [anispawn-desktop]
+    paths:
+      - 'anispawn/**'
+      - '.github/workflows/anispawn.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux
+          - os: windows-latest
+            target: win
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: anispawn
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify syntax and tests
+        run: |
+          node --check main.cjs
+          node --check preload.cjs
+          node --check renderer/app.js
+          npm test
+      - name: Linux package prerequisites
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y fakeroot dpkg
+      - name: Build installers
+        run: npm run make:${{ matrix.target }}
+      - name: Upload portable and installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: AniSpawn-${{ matrix.target }}
+          path: anispawn/out/make/**
+          if-no-files-found: error
