@@ -1,0 +1,1 @@
+const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');test('HTML renderer is included',()=>assert.match(fs.readFileSync(path.join(__dirname,'../renderer/index.html'),'utf8'),/AniSpawn/));test('local JS entry exists',()=>assert.ok(fs.existsSync(path.join(__dirname,'../renderer/app.js'))));
